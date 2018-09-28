@@ -4,7 +4,7 @@
 	"description": "web service exposing hook for triggering pulls for deploying application",
 	"main": "lib/index.js",
 	"scripts": {
-		"start": "node_modules/.bin/hitchy",
+		"start": "node_modules/.bin/hitchy start --log-level=request,application.deploy",
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},
 	"repository": {
@@ -14,6 +14,8 @@
 	"author": "",
 	"license": "MIT",
 	"dependencies": {
+		"debug": "^4.0.1",
+		"file-essentials": "0.0.12",
 		"hitchy": "0.0.15"
 	}
 }
