@@ -67,31 +67,33 @@ module.exports = function( options ) {
 						return File.stat( scriptFile )
 							.then( stat => {
 								if ( stat && stat.isFile() ) {
-									let detached = false;
+									let processed = false;
 
 									return Promise.race( [
 										// invoke script waiting for it to complete
 										_invoke( name, scriptFile )
 											.then( result => {
-												Log( `script ${scriptFile} ${detached ? "eventually " : ""}exited with code ${result.exitCode}` );
+												Log( `script ${scriptFile} ${processed ? "eventually " : ""}exited with code ${result.exitCode}` );
 
-												if ( detached ) {
+												if ( processed ) {
 													result.output.forEach( ( { channel, chunk } ) => {
 														Debug( `${channel}: ${chunk.toString( "utf8" )}` );
 													} );
+												} else {
+													processed = true;
 												}
 
 												return result;
 											}, error => {
-												Log( `script ${scriptFile} ${detached ? "eventually " : ""}failed: ${error.message}` );
+												Log( `script ${scriptFile} ${processed ? "eventually " : ""}failed: ${error.message}` );
 
 												throw error;
 											} ),
 										// respond to client after delay of 3 seconds
 										new Promise( resolve => {
 											setTimeout( () => {
-												if ( !detached ) {
-													detached = true;
+												if ( !processed ) {
+													processed = true;
 
 													Log( `detaching action ${name}` );
 												}
