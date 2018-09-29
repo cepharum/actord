@@ -15,7 +15,7 @@
 	"author": "",
 	"license": "MIT",
 	"dependencies": {
-		"file-essentials": "0.0.12",
-		"hitchy": "0.0.15"
+		"file-essentials": "^0.0.12",
+		"hitchy": "^0.0.16"
 	}
 }
