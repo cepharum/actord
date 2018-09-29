@@ -70,16 +70,15 @@ module.exports = function( options ) {
 									let detached = false;
 
 									return Promise.race( [
+										// invoke script waiting for it to complete
 										_invoke( name, scriptFile )
 											.then( result => {
-												if ( detached ) {
-													Log( `script ${scriptFile} eventually exited with code ${result.exitCode}` );
+												Log( `script ${scriptFile} ${detached ? "eventually " : ""}exited with code ${result.exitCode}` );
 
+												if ( detached ) {
 													result.output.forEach( ( { channel, chunk } ) => {
 														Debug( `${channel}: ${chunk.toString( "utf8" )}` );
 													} );
-												} else {
-													Log( `script ${scriptFile} exited with code ${result.exitCode}` );
 												}
 
 												return result;
@@ -88,6 +87,7 @@ module.exports = function( options ) {
 
 												throw error;
 											} ),
+										// respond to client after delay of 3 seconds
 										new Promise( resolve => {
 											setTimeout( () => {
 												if ( !detached ) {
@@ -173,15 +173,19 @@ function _invoke( taskName, scriptFile ) {
 		child.stderr.on( "error", _fail );
 		child.stderr.on( "end", _advance );
 
+		function _close() {
+			return new Promise( resolve => {
+				if ( data.exitCode == null ) {
+					child.kill( "SIGTERM" );
+					child.on( "exit", resolve );
+				} else {
+					resolve();
+				}
+			} );
+		}
+
 		function _fail( error ) {
-			if ( data.exitCode == null ) {
-				child.kill( "SIGTERM" );
-				child.on( "exit", () => {
-					reject( error );
-				} );
-			} else {
-				reject( error );
-			}
+			_close().then( () => reject( error ) );
 		}
 
 		function _advance() {
