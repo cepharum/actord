@@ -101,6 +101,7 @@ module.exports = function( options ) {
 												resolve( {
 													exitCode: NaN,
 													output: [],
+													error: null,
 													detached: true,
 												} );
 											}, 3000 );
@@ -153,6 +154,8 @@ function _invoke( taskName, scriptFile ) {
 		const data = {
 			exitCode: null,
 			output: [],
+			error: null,
+			detached: false,
 		};
 
 		child.on( "error", _fail );
@@ -187,11 +190,13 @@ function _invoke( taskName, scriptFile ) {
 		}
 
 		function _fail( error ) {
+			data.error = error;
+
 			_close().then( () => reject( error ) );
 		}
 
 		function _advance() {
-			if ( ++stage >= 3 ) {
+			if ( ++stage >= 3 && !data.error ) {
 				resolve( data );
 			}
 		}
