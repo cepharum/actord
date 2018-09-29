@@ -5,6 +5,7 @@
 	"main": "lib/index.js",
 	"scripts": {
 		"start": "node_modules/.bin/hitchy start --log-level=request,application.deploy",
+		"dev": "node_modules/.bin/hitchy start --debug",
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},
 	"repository": {
