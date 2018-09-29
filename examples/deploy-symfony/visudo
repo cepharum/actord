@@ -1,0 +1,4 @@
+#
+# The following line must be added to `sudo` configuration using tool `visudo`.
+#
+actord ALL = (root) NOPASSWD: /path/to/actord/actors/deploy-symfony/.run.root.sh

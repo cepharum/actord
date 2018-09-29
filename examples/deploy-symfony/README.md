@@ -1,0 +1,1 @@
+This example illustrates how to fetch an Symfony-based application from a remote git repository updating its dependencies and migrating its schema. The file **visudo** is containing input to be inserted into `sudo` configuration using tool `visudo`.
