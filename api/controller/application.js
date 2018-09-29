@@ -43,12 +43,13 @@ const File = require( "file-essentials" );
  */
 module.exports = function( options ) {
 	const api = this;
-	const Log = api.log( "application.deploy" );
-	const Debug = api.log( "application.deploy.debug" );
 
 	return {
 		deploy: function( request, response ) {
 			const { name, token } = request.params;
+
+			const Log = api.log( "pulling-deployer:deploy" );
+			const Debug = api.log( "pulling-deployer:deploy.debug" );
 
 			if ( name && token ) {
 				const applicationFolder = Path.join( options.projectFolder, "registry", name );
