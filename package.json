@@ -1,6 +1,6 @@
 {
 	"name": "actord",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"description": "web service exposing triggerable actors",
 	"main": "lib/index.js",
 	"scripts": {
