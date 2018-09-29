@@ -30,6 +30,6 @@
 
 module.exports = {
 	routes: {
-		"GET /application/deploy/:name/:token": "ApplicationController.deploy",
+		"* /application/deploy/:name/:token": "ApplicationController.deploy",
 	},
 };
