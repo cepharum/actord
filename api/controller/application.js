@@ -31,7 +31,6 @@
 const Path = require( "path" );
 const Child = require( "child_process" );
 
-const Debug = require( "debug" )( "application.deploy" );
 const File = require( "file-essentials" );
 
 
@@ -44,6 +43,8 @@ const File = require( "file-essentials" );
  */
 module.exports = function( options ) {
 	const api = this;
+	const Log = api.log( "application.deploy" );
+	const Debug = api.log( "application.deploy.debug" );
 
 	return {
 		deploy: function( request, response ) {
@@ -61,13 +62,40 @@ module.exports = function( options ) {
 							throw Object.assign( new Error( `invalid token` ), { code: 403 } );
 						}
 
+						Log( `request for action ${name} => ${scriptFile}` );
+
 						return File.stat( scriptFile )
 							.then( stat => {
 								if ( stat && stat.isFile() ) {
+									let detached = false;
+
 									return Promise.race( [
-										_invoke( name, scriptFile ),
+										_invoke( name, scriptFile )
+											.then( result => {
+												if ( detached ) {
+													Log( `script ${scriptFile} eventually exited with code ${result.exitCode}` );
+
+													result.output.forEach( ( { channel, chunk } ) => {
+														Debug( `${channel}: ${chunk.toString( "utf8" )}` );
+													} );
+												} else {
+													Log( `script ${scriptFile} exited with code ${result.exitCode}` );
+												}
+
+												return result;
+											}, error => {
+												Log( `script ${scriptFile} ${detached ? "eventually " : ""}failed: ${error.message}` );
+
+												throw error;
+											} ),
 										new Promise( resolve => {
 											setTimeout( () => {
+												if ( !detached ) {
+													detached = true;
+
+													Log( `detaching action ${name}` );
+												}
+
 												resolve( {
 													exitCode: NaN,
 													output: [],
@@ -84,7 +112,7 @@ module.exports = function( options ) {
 						switch ( error.code ) {
 							case "ENOENT" :
 							case "ENOTDIR" :
-								Debug( `request failed: ${error.message}` );
+								Log( `request failed: ${error.message}` );
 								error = new Error( "invalid registry setup" );
 						}
 

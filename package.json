@@ -15,7 +15,6 @@
 	"author": "",
 	"license": "MIT",
 	"dependencies": {
-		"debug": "^4.0.1",
 		"file-essentials": "0.0.12",
 		"hitchy": "0.0.15"
 	}
