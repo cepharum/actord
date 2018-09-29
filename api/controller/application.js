@@ -64,10 +64,19 @@ module.exports = function( options ) {
 						return File.stat( scriptFile )
 							.then( stat => {
 								if ( stat && stat.isFile() ) {
-									return _invoke( scriptFile )
-										.then( result => {
-											response.json( result );
-										} );
+									return Promise.race( [
+										_invoke( name, scriptFile ),
+										new Promise( resolve => {
+											setTimeout( () => {
+												resolve( {
+													exitCode: NaN,
+													output: [],
+													detached: true,
+												} );
+											}, 3000 );
+										} ),
+									] )
+										.then( result => response.json( result ) );
 								}
 							} );
 					} )
@@ -96,7 +105,16 @@ module.exports = function( options ) {
 	};
 };
 
-function _invoke( scriptFile ) {
+
+const Locks = {};
+
+function _invoke( taskName, scriptFile ) {
+	if ( Locks[taskName] ) {
+		return Promise.reject( Object.assign( new Error( "task is locked currently" ), { code: 423 } ) );
+	}
+
+	Locks[taskName] = true;
+
 	return new Promise( ( resolve, reject ) => {
 		const child = Child.exec( scriptFile );
 
@@ -107,7 +125,7 @@ function _invoke( scriptFile ) {
 			output: [],
 		};
 
-		child.on( "error", reject );
+		child.on( "error", _fail );
 		child.on( "exit", code => {
 			data.exitCode = code;
 			_advance();
@@ -117,20 +135,38 @@ function _invoke( scriptFile ) {
 			channel: "stdout",
 			chunk,
 		} ) );
-		child.stdout.on( "error", reject );
+		child.stdout.on( "error", _fail );
 		child.stdout.on( "end", _advance );
 
 		child.stderr.on( "data", chunk => data.output.push( {
 			channel: "stderr",
 			chunk,
 		} ) );
-		child.stderr.on( "error", reject );
+		child.stderr.on( "error", _fail );
 		child.stderr.on( "end", _advance );
+
+		function _fail( error ) {
+			if ( data.exitCode == null ) {
+				child.kill( "SIGTERM" );
+				child.on( "exit", () => {
+					reject( error );
+				} );
+			} else {
+				reject( error );
+			}
+		}
 
 		function _advance() {
 			if ( ++stage >= 3 ) {
 				resolve( data );
 			}
 		}
-	} );
+	} )
+		.then( result => {
+			Locks[taskName] = false;
+			return result;
+		}, error => {
+			Locks[taskName] = false;
+			throw error;
+		} );
 }
