@@ -30,6 +30,6 @@
 
 module.exports = {
 	routes: {
-		"* /application/deploy/:name/:token": "ApplicationController.deploy",
+		"* /trigger/:name/:token": "ActorController.trigger",
 	},
 };

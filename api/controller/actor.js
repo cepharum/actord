@@ -45,14 +45,14 @@ module.exports = function( options ) {
 	const api = this;
 
 	return {
-		deploy: function( request, response ) {
+		trigger: function( request, response ) {
 			const { name, token } = request.params;
 
-			const Log = api.log( "pulling-deployer:deploy" );
-			const Debug = api.log( "pulling-deployer:deploy.debug" );
+			const Log = api.log( "actord:deploy" );
+			const Debug = api.log( "actord:deploy.debug" );
 
 			if ( name && token ) {
-				const applicationFolder = Path.join( options.projectFolder, "registry", name );
+				const applicationFolder = Path.join( options.projectFolder, "actors", name );
 				const tokenFile = Path.join( applicationFolder, ".token" );
 				const scriptFile = Path.join( applicationFolder, "run.sh" );
 
@@ -117,7 +117,7 @@ module.exports = function( options ) {
 							case "ENOENT" :
 							case "ENOTDIR" :
 								Log( `request failed: ${error.message}` );
-								error = new Error( "invalid registry setup" );
+								error = new Error( "invalid actor setup" );
 						}
 
 						response
@@ -140,12 +140,12 @@ module.exports = function( options ) {
 
 const Locks = {};
 
-function _invoke( taskName, scriptFile ) {
-	if ( Locks[taskName] ) {
-		return Promise.reject( Object.assign( new Error( "task is locked currently" ), { code: 423 } ) );
+function _invoke( actorName, scriptFile ) {
+	if ( Locks[actorName] ) {
+		return Promise.reject( Object.assign( new Error( "actor is locked currently" ), { code: 423 } ) );
 	}
 
-	Locks[taskName] = true;
+	Locks[actorName] = true;
 
 	return new Promise( ( resolve, reject ) => {
 		const child = Child.exec( scriptFile );
@@ -203,10 +203,10 @@ function _invoke( taskName, scriptFile ) {
 		}
 	} )
 		.then( result => {
-			Locks[taskName] = false;
+			Locks[actorName] = false;
 			return result;
 		}, error => {
-			Locks[taskName] = false;
+			Locks[actorName] = false;
 			throw error;
 		} );
 }

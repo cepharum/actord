@@ -1,0 +1,12 @@
+[Unit]
+Description=web service exposing triggerable actors
+
+[Service]
+Type=simple
+WorkingDirectory=/path/to/actord
+Environment=IP=0.0.0.0
+ExecStart=/usr/bin/env npm start
+User=actord
+
+[Install]
+WantedBy=multi-user.target

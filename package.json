@@ -1,18 +1,18 @@
 {
-	"name": "pulling-deployer",
+	"name": "actord",
 	"version": "0.0.1",
-	"description": "web service exposing hook for triggering pulls for deploying application",
+	"description": "web service exposing triggerable actors",
 	"main": "lib/index.js",
 	"scripts": {
-		"start": "node_modules/.bin/hitchy start --log-level=hitchy:request,pulling-deployer:*",
+		"start": "node_modules/.bin/hitchy start --log-level=hitchy:request,actord:*",
 		"dev": "node_modules/.bin/hitchy start --debug",
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://git.cepharum.de/hosting/pulling-deployer.git"
+		"url": "https://github.com/cepharum/actord.git"
 	},
-	"author": "",
+	"author": "cepharum GmbH",
 	"license": "MIT",
 	"dependencies": {
 		"file-essentials": "^0.0.12",
