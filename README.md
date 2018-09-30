@@ -107,3 +107,11 @@ All your actor's elevated operations should be placed in **.run.root.sh** eventu
   ```
   Defaults!/path/to/actord/actors/some-actor/.run.root.sh !requiretty
   ``` 
+
+## Using HTTPS
+
+`actord` is built with [hitchy](https://www.npmjs.com/package/hitchy). The latter features support for HTTPS just by using additional command line arguments passed on invoking `npm start` to provide names of files containing key and certificate required for SSL encryption:
+
+```bash
+npm start -- --sslKey=/path/to/key.pem --sslCert=/path/to/cert.pem --sslCaCert=/path/to/chain.pem
+```
