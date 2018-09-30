@@ -8,7 +8,7 @@
 #     login your-username
 #     password the-secret-password-here
 #
-# Make sure the file readable by its owner, only.
+# Make sure the file is readable by its owner, only.
 #
 
 
