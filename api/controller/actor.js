@@ -68,20 +68,20 @@ module.exports = function( options ) {
 						return File.stat( scriptFile )
 							.then( stat => {
 								if ( stat && stat.isFile() ) {
-									let processed = false;
+									const context = {
+										detached: false,
+									};
 
 									return Promise.race( [
 										// invoke script waiting for it to complete
-										_invoke( name, scriptFile )
+										_invoke( name, scriptFile, context )
 											.then( result => {
-												Log( `script ${scriptFile} ${processed ? "eventually " : ""}exited with code ${result.exitCode}` );
+												Log( `script ${scriptFile} ${context.detached ? "eventually " : ""}exited with code ${result.exitCode}` );
 
-												if ( processed ) {
-													result.output.forEach( ( { channel, chunk } ) => {
-														Debug( `${channel}: ${chunk.toString( "utf8" )}` );
-													} );
+												if ( context.detached ) {
+													result.output.forEach( logCapturedOutput );
 												} else {
-													processed = true;
+													context.detached = true;
 												}
 
 												return result;
@@ -93,8 +93,8 @@ module.exports = function( options ) {
 										// respond to client after delay of 3 seconds
 										new Promise( resolve => {
 											setTimeout( () => {
-												if ( !processed ) {
-													processed = true;
+												if ( !context.detached ) {
+													context.detached = true;
 
 													Log( `detaching action ${name}` );
 												}
@@ -140,7 +140,11 @@ module.exports = function( options ) {
 
 const Locks = {};
 
-function _invoke( actorName, scriptFile ) {
+function logCapturedOutput( { channel, chunk } ) {
+	Debug( `${channel}: ${chunk.toString( "utf8" )}` );
+}
+
+function _invoke( actorName, scriptFile, context ) {
 	if ( Locks[actorName] ) {
 		return Promise.reject( Object.assign( new Error( "actor is locked currently" ), { code: 423 } ) );
 	}
@@ -165,17 +169,39 @@ function _invoke( actorName, scriptFile ) {
 			_advance();
 		} );
 
-		child.stdout.on( "data", chunk => data.output.push( {
-			channel: "stdout",
-			chunk,
-		} ) );
+		child.stdout.on( "data", chunk => {
+			const block = {
+				channel: "stdout",
+				chunk,
+			};
+
+			if ( context.detached ) {
+				data.output.forEach( logCapturedOutput );
+				data.output.splice( 0 );
+
+				logCapturedOutput( block );
+			} else {
+				data.output.push( block );
+			}
+		} );
 		child.stdout.on( "error", _fail );
 		child.stdout.on( "end", _advance );
 
-		child.stderr.on( "data", chunk => data.output.push( {
-			channel: "stderr",
-			chunk,
-		} ) );
+		child.stderr.on( "data", chunk => {
+			const block = {
+				channel: "stderr",
+				chunk,
+			};
+
+			if ( context.detached ) {
+				data.output.forEach( logCapturedOutput );
+				data.output.splice( 0 );
+
+				logCapturedOutput( block );
+			} else {
+				data.output.push( block );
+			}
+		} );
 		child.stderr.on( "error", _fail );
 		child.stderr.on( "end", _advance );
 
