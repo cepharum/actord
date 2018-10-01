@@ -47,6 +47,9 @@ module.exports = function( options ) {
 	const Log = api.log( "actord:deploy" );
 	const Debug = api.log( "actord:deploy.debug" );
 
+	const Locks = {};
+
+
 	return {
 		trigger: function( request, response ) {
 			const { name, token } = request.params;
@@ -135,10 +138,6 @@ module.exports = function( options ) {
 				} );
 		},
 	};
-
-
-
-	const Locks = {};
 
 	function logCapturedOutput( { channel, chunk } ) {
 		Debug( `${channel}: ${chunk.toString( "utf8" )}` );
