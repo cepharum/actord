@@ -44,12 +44,12 @@ const File = require( "file-essentials" );
 module.exports = function( options ) {
 	const api = this;
 
+	const Log = api.log( "actord:deploy" );
+	const Debug = api.log( "actord:deploy.debug" );
+
 	return {
 		trigger: function( request, response ) {
 			const { name, token } = request.params;
-
-			const Log = api.log( "actord:deploy" );
-			const Debug = api.log( "actord:deploy.debug" );
 
 			if ( name && token ) {
 				const applicationFolder = Path.join( options.projectFolder, "actors", name );
@@ -135,104 +135,105 @@ module.exports = function( options ) {
 				} );
 		},
 	};
-};
 
 
-const Locks = {};
 
-function logCapturedOutput( { channel, chunk } ) {
-	Debug( `${channel}: ${chunk.toString( "utf8" )}` );
-}
+	const Locks = {};
 
-function _invoke( actorName, scriptFile, context ) {
-	if ( Locks[actorName] ) {
-		return Promise.reject( Object.assign( new Error( "actor is locked currently" ), { code: 423 } ) );
+	function logCapturedOutput( { channel, chunk } ) {
+		Debug( `${channel}: ${chunk.toString( "utf8" )}` );
 	}
 
-	Locks[actorName] = true;
+	function _invoke( actorName, scriptFile, context ) {
+		if ( Locks[actorName] ) {
+			return Promise.reject( Object.assign( new Error( "actor is locked currently" ), { code: 423 } ) );
+		}
 
-	return new Promise( ( resolve, reject ) => {
-		const child = Child.exec( scriptFile );
+		Locks[actorName] = true;
 
-		let stage = 0;
+		return new Promise( ( resolve, reject ) => {
+			const child = Child.exec( scriptFile );
 
-		const data = {
-			exitCode: null,
-			output: [],
-			error: null,
-			detached: false,
-		};
+			let stage = 0;
 
-		child.on( "error", _fail );
-		child.on( "exit", code => {
-			data.exitCode = code;
-			_advance();
-		} );
-
-		child.stdout.on( "data", chunk => {
-			const block = {
-				channel: "stdout",
-				chunk,
+			const data = {
+				exitCode: null,
+				output: [],
+				error: null,
+				detached: false,
 			};
 
-			if ( context.detached ) {
-				data.output.forEach( logCapturedOutput );
-				data.output.splice( 0 );
+			child.on( "error", _fail );
+			child.on( "exit", code => {
+				data.exitCode = code;
+				_advance();
+			} );
 
-				logCapturedOutput( block );
-			} else {
-				data.output.push( block );
-			}
-		} );
-		child.stdout.on( "error", _fail );
-		child.stdout.on( "end", _advance );
+			child.stdout.on( "data", chunk => {
+				const block = {
+					channel: "stdout",
+					chunk,
+				};
 
-		child.stderr.on( "data", chunk => {
-			const block = {
-				channel: "stderr",
-				chunk,
-			};
+				if ( context.detached ) {
+					data.output.forEach( logCapturedOutput );
+					data.output.splice( 0 );
 
-			if ( context.detached ) {
-				data.output.forEach( logCapturedOutput );
-				data.output.splice( 0 );
-
-				logCapturedOutput( block );
-			} else {
-				data.output.push( block );
-			}
-		} );
-		child.stderr.on( "error", _fail );
-		child.stderr.on( "end", _advance );
-
-		function _close() {
-			return new Promise( resolve => {
-				if ( data.exitCode == null ) {
-					child.kill( "SIGTERM" );
-					child.on( "exit", resolve );
+					logCapturedOutput( block );
 				} else {
-					resolve();
+					data.output.push( block );
 				}
 			} );
-		}
+			child.stdout.on( "error", _fail );
+			child.stdout.on( "end", _advance );
 
-		function _fail( error ) {
-			data.error = error;
+			child.stderr.on( "data", chunk => {
+				const block = {
+					channel: "stderr",
+					chunk,
+				};
 
-			_close().then( () => reject( error ) );
-		}
+				if ( context.detached ) {
+					data.output.forEach( logCapturedOutput );
+					data.output.splice( 0 );
 
-		function _advance() {
-			if ( ++stage >= 3 && !data.error ) {
-				resolve( data );
+					logCapturedOutput( block );
+				} else {
+					data.output.push( block );
+				}
+			} );
+			child.stderr.on( "error", _fail );
+			child.stderr.on( "end", _advance );
+
+			function _close() {
+				return new Promise( resolve => {
+					if ( data.exitCode == null ) {
+						child.kill( "SIGTERM" );
+						child.on( "exit", resolve );
+					} else {
+						resolve();
+					}
+				} );
 			}
-		}
-	} )
-		.then( result => {
-			Locks[actorName] = false;
-			return result;
-		}, error => {
-			Locks[actorName] = false;
-			throw error;
-		} );
-}
+
+			function _fail( error ) {
+				data.error = error;
+
+				_close().then( () => reject( error ) );
+			}
+
+			function _advance() {
+				if ( ++stage >= 3 && !data.error ) {
+					resolve( data );
+				}
+			}
+		} )
+			.then( result => {
+				Locks[actorName] = false;
+				return result;
+			}, error => {
+				Locks[actorName] = false;
+				throw error;
+			} );
+	}
+};
